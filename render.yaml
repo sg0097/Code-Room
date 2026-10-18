@@ -1,0 +1,27 @@
+# Render blueprint: New → Blueprint → pick this repo. Database: a free Postgres on neon.tech
+# (paste its connection string as DATABASE_URL when Render asks).
+services:
+  - type: web
+    name: coderoom
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/config
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: WORKER_TOKEN
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: BRAVE_API_KEY
+        sync: false

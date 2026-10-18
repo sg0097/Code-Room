@@ -1,0 +1,16 @@
+{
+  "name": "coderoom",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Collaborative coding rooms: shared editor + video for 2-5 people",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "build": "npm run install:all && npm run build --prefix client",
+    "start": "npm start --prefix server",
+    "dev:server": "DEV_LOGIN=true npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client"
+  },
+  "engines": {
+    "node": ">=22.9"
+  }
+}
