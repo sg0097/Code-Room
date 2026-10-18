@@ -79,7 +79,7 @@ export default function Login({ from: fromProp, invite } = {}) {
           <Avatar user={invite.creator} size={40} />
           <div>
             <b>{invite.creator.name} challenged you</b>
-            <span className="muted small">{invite.title} · {invite.mode === 'independent' ? 'Race' : 'Together'} · {invite.timeLimitMin} min</span>
+            <span className="muted small">{invite.title} · {invite.mode === 'independent' ? 'Compete' : 'Together'} · {invite.timeLimitMin} min</span>
           </div>
         </div>
       ) : null}
@@ -117,19 +117,18 @@ export default function Login({ from: fromProp, invite } = {}) {
 
       <section className="landing-hero">
         <div className="landing-copy">
-          <span className="kicker">for anyone with an interview coming up</span>
-          <h1>Interview prep is better <mark>with a friend</mark>.</h1>
+          <span className="kicker">Interview practice</span>
+          <h1>Practice interviews <mark>with your friends</mark>.</h1>
           <p className="lead">
-            Pick a real interview problem and send it to a friend. You both solve it on the same clock, then put your answers
-            side by side and argue about them. That's the part where you actually learn.
+            Pick a real interview problem. Send it to a friend. Solve it at the same time, then compare your answers.
           </p>
           {signIn}
         </div>
         <div className="landing-art">
-          <span className="hand note-race">a race, mid-way through ↓</span>
+          <span className="hand note-race">this is a live room ↓</span>
           <div className="taped"><HeroMockup /></div>
           {counts?.experiences > 0 && (
-            <span className="sticky">{counts.experiences.toLocaleString()} real interviews from {counts.companies.toLocaleString()} companies. We link to them, we don't copy them.</span>
+            <span className="sticky">{counts.experiences.toLocaleString()} real interview experiences from {counts.companies.toLocaleString()} companies</span>
           )}
         </div>
       </section>
@@ -137,23 +136,23 @@ export default function Login({ from: fromProp, invite } = {}) {
       {counts && (
         <p className="ledger">
           <span><b>{counts.problems}</b> problems</span>
-          {counts.experiences > 0 && <span><b>{counts.experiences.toLocaleString()}</b> interview write-ups</span>}
-          <span><b>2</b> ways to play: race or together</span>
-          <span><b>0</b> servers running your code (it runs in your browser)</span>
+          {counts.experiences > 0 && <span><b>{counts.experiences.toLocaleString()}</b> interview experiences</span>}
+          <span><b>2</b> ways: compete or solve together</span>
+          <span><b>100%</b> free</span>
         </p>
       )}
 
       <section className="how-paper">
         <h2>How it works</h2>
         <ol className="ruled">
-          <li><b>Pick a problem.</b> System design, low-level design, backend, or plain code with tests.</li>
-          <li><b>Send the link.</b> Your friend clicks it, signs in, and they're in. No setup.</li>
-          <li><b>Solve, then compare.</b> Same problem, same timer. Afterwards you see both answers and talk about where you differed.</li>
+          <li><b>Pick a problem.</b> System design, LLD, backend or coding.</li>
+          <li><b>Send the link.</b> Your friend opens it and joins.</li>
+          <li><b>Solve and compare.</b> You both get the same time. Then you see each other's answers.</li>
         </ol>
-        <span className="hand note-how">or make a group and race all of them</span>
+        <span className="hand note-how">you can also make a group</span>
       </section>
 
-      <footer className="landing-foot">CodeRoom. Made for practising out loud.</footer>
+      <footer className="landing-foot">CodeRoom</footer>
     </div>
   )
 }

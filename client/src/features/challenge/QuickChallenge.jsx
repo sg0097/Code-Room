@@ -10,8 +10,8 @@ import { DEFAULT_MINUTES, FORMAT_LABEL } from '../problems/shared'
 import InviteBox from './InviteBox'
 
 const MODES = [
-  { id: 'independent', icon: 'swords', title: 'Race', text: 'Same problem, same timer. Compare after.' },
-  { id: 'collaborative', icon: 'users', title: 'Together', text: 'One live room: code, whiteboard, video.' },
+  { id: 'independent', icon: 'swords', title: 'Compete', text: 'You both solve it alone, with the same time limit.' },
+  { id: 'collaborative', icon: 'users', title: 'Together', text: 'Solve it together in one room, with video.' },
 ]
 const TIMES = [30, 45, 60, 90]
 
@@ -87,12 +87,12 @@ export default function QuickChallenge({ problemSlug = null, friendId = null, gr
         <div className="qc-head">
           <span className="qc-check"><Icon name="check" size={22} /></span>
           <div>
-            <h3>Done. Now send it.</h3>
-            <p className="muted small">{made.title} · {pick.mode === 'independent' ? 'Race' : 'Together'} · {pick.minutes} min</p>
+            <h3>Challenge created</h3>
+            <p className="muted small">{made.title} · {pick.mode === 'independent' ? 'Compete' : 'Together'} · {pick.minutes} min</p>
           </div>
         </div>
         {group ? (
-          <p className="muted small">Everyone in <b>{group.name}</b> sees it on their home page. Each person answers on their own; you'll see all the answers side by side at the end.</p>
+          <p className="muted small">Everyone in <b>{group.name}</b> can see it on their home page. When everyone is done, you can see all the answers.</p>
         ) : (
           <>
             <InviteBox code={made.inviteCode} title={made.title} />
@@ -100,7 +100,7 @@ export default function QuickChallenge({ problemSlug = null, friendId = null, gr
           </>
         )}
         <div className="row wrap">
-          <button className="btn" onClick={() => navigate(`/challenges/${made.id}`)}>{pick.mode === 'independent' ? 'Start solving' : 'Go to the challenge'} <Icon name="arrow" size={15} /></button>
+          <button className="btn" onClick={() => navigate(`/challenges/${made.id}`)}>{pick.mode === 'independent' ? 'Start solving' : 'Open the challenge'} <Icon name="arrow" size={15} /></button>
           <button className="btn ghost" onClick={() => setMade(null)}>Make another</button>
         </div>
       </div>
@@ -139,7 +139,7 @@ export default function QuickChallenge({ problemSlug = null, friendId = null, gr
           {group ? (
             <div className="qc-step">
               <span className="qc-label">How</span>
-              <p className="qc-note"><Icon name="swords" size={15} /> A race: everyone in the group answers on their own, with the same timer.</p>
+              <p className="qc-note"><Icon name="swords" size={15} /> Everyone in the group solves it alone, with the same time limit.</p>
             </div>
           ) : (
             <div className="qc-step">
@@ -182,7 +182,7 @@ export default function QuickChallenge({ problemSlug = null, friendId = null, gr
                 ))}
               </div>
             )}
-            <span className="muted small">{group ? `Everyone in ${group.name} gets it.` : friends.length || myGroups.length ? 'Pick a group or friends, or just send the link to anyone.' : "You'll get a link to send to anyone."}</span>
+            <span className="muted small">{group ? `Everyone in ${group.name} gets it.` : friends.length || myGroups.length ? 'Pick a group or friends. Or just share the link.' : "You'll get a link to send to anyone."}</span>
           </div>
           )}
 
@@ -203,7 +203,7 @@ function Ticket({ problem, mode, minutes, me, friends, group, ready }) {
   return (
     <div className={`ticket ${mode} ${ready ? 'ready' : ''}`} aria-hidden="true">
       <div className="ticket-top">
-        <span className="ticket-tag">{group ? group.name : mode === 'independent' ? 'Race' : 'Together'}</span>
+        <span className="ticket-tag">{group ? group.name : mode === 'independent' ? 'Compete' : 'Together'}</span>
         <span className="ticket-time">{minutes}:00</span>
       </div>
       <span className="ticket-no">No. {String(problem.id).replace(/\D/g, '').slice(0, 4).padStart(4, '0')}</span>
@@ -222,7 +222,7 @@ function Ticket({ problem, mode, minutes, me, friends, group, ready }) {
         )}
       </div>
       <div className="ticket-cut" />
-      <div className="ticket-foot">{group ? (ready ? 'sent to the whole group' : 'goes to everyone in the group') : ready ? 'link ready, send it' : 'admit one (or a few)'}</div>
+      <div className="ticket-foot">{group ? (ready ? 'sent to the group' : 'everyone in the group gets it') : ready ? 'link is ready' : 'anyone with the link can join'}</div>
       {ready && <span className="ticket-stamp">SENT</span>}
     </div>
   )

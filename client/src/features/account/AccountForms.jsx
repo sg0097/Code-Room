@@ -18,7 +18,7 @@ function useUsernameCheck(value) {
 }
 
 function UsernameHint({ check }) {
-  if (!check) return <span className="field-hint small muted">Letters, numbers, _ and . — this is how friends find you.</span>
+  if (!check) return <span className="field-hint small muted">Use letters, numbers, _ or . Friends will find you with this.</span>
   if (check.checking) return <span className="field-hint small muted">Checking…</span>
   return check.available
     ? <span className="field-hint small ok">✓ @{check.username} is free</span>
@@ -91,7 +91,7 @@ export function SignUpForm({ onDone }) {
         <UsernameHint check={check} />
       </label>
       <label className="field">
-        <span>Email <span className="muted">(optional, never shown to anyone)</span></span>
+        <span>Email <span className="muted">(optional, only you can see it)</span></span>
         <input type="email" autoComplete="email" value={f.email} onChange={set('email')} placeholder="you@example.com" />
       </label>
       <label className="field">
@@ -129,8 +129,8 @@ export function PickUsername() {
   return (
     <div className="center">
       <form className="card join-card" onSubmit={save}>
-        <h2>Pick your username</h2>
-        <p className="muted">Hi {user.name.split(' ')[0]}! Friends find and see you by your username. Your email stays private.</p>
+        <h2>Choose a username</h2>
+        <p className="muted">Hi {user.name.split(' ')[0]}! Friends will find you with your username. Your email stays private.</p>
         <label className="field">
           <span>Username</span>
           <div className="at-input"><span>@</span><input autoFocus value={value} onChange={(e) => setValue(e.target.value)} maxLength={21} aria-label="Username" /></div>

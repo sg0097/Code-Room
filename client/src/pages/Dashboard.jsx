@@ -27,7 +27,7 @@ const parseCode = (input) => {
 
 /**
  * Home: your goal, then "challenge a friend" (the main thing), your challenges, what to
- * practise next and your progress.
+ * practice next and your progress.
  */
 export default function Dashboard() {
   const { user } = useAuth()
@@ -69,7 +69,7 @@ export default function Dashboard() {
   const open = (c) => ['INVITED', 'ACTIVE'].includes(c.status)
   const pending = list.filter((c) => open(c) && c.me.state === 'INVITED')
   const active = list.filter((c) => open(c) && !['INVITED', 'DECLINED'].includes(c.me.state) && !c.practice)
-  const practising = list.filter((c) => open(c) && c.practice && c.me.state !== 'SUBMITTED')
+  const practicing = list.filter((c) => open(c) && c.practice && c.me.state !== 'SUBMITTED')
   const completed = list.filter((c) => c.status === 'COMPLETED').length
   const p = prep.profile
   const first = user.name.split(' ')[0]
@@ -91,17 +91,17 @@ export default function Dashboard() {
               <p className="hero-goal">
                 {p.role || p.companies.length
                   ? <>Preparing for <mark>{[p.role, p.companies.length ? `at ${p.companies.slice(0, 3).join(', ')}${p.companies.length > 3 ? ` and ${p.companies.length - 3} more` : ''}` : ''].filter(Boolean).join(' ')}</mark>.</>
-                  : 'No goal set yet.'}{' '}
-                <button className="text-btn" onClick={() => setEditGoal(true)}>change</button>
+                  : 'You have not set a goal yet.'}{' '}
+                <button className="text-btn" onClick={() => setEditGoal(true)}>edit</button>
               </p>
               <div className="row wrap">
-                {top && <Link to={`/problems/${top.slug}`} className="btn">Next up: {top.title} <Icon name="arrow" size={15} /></Link>}
+                {top && <Link to={`/problems/${top.slug}`} className="btn">Next: {top.title} <Icon name="arrow" size={15} /></Link>}
                 <Link to="/challenges/new" className="btn cta">Challenge a friend</Link>
               </div>
             </>
           ) : (
             <>
-              <p className="hero-sub">{prep.setUp ? 'What changed?' : "Three quick questions, then we'll line up the right problems for you."}</p>
+              <p className="hero-sub">{prep.setUp ? 'Update your goal.' : 'Answer 3 quick questions so we can suggest problems for you.'}</p>
               <div className="hero-goalcard">
                 <GoalCard
                   profile={p}
@@ -124,7 +124,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="margin-note">
-              <span className="hand">tip: you can change this any time</span>
+              <span className="hand">you can change this later</span>
               <HeroMockup />
             </div>
           )}
@@ -140,7 +140,7 @@ export default function Dashboard() {
         <aside className="panel">
           <h2 className="h2">Your challenges <Link to="/challenges" className="see-all small">All</Link></h2>
           {pending.length === 0 && active.length === 0 && (
-            <p className="muted small">No challenges yet. Make one and send the link.</p>
+            <p className="muted small">No challenges yet.</p>
           )}
           {pending.map((c) => (
             <MiniChallenge
@@ -161,18 +161,18 @@ export default function Dashboard() {
       </Reveal>
 
       <Reveal as="section" className="stat-tiles">
-        <Stat icon="check" tone="teal" value={`${prep.solved}/${prep.total}`} label="problems solved" />
+        <Stat icon="check" tone="teal" value={`${prep.solved}/${prep.total}`} label="solved" />
         <Stat icon="flame" tone="coral" value={prep.streak} label="day streak" />
-        <Stat icon="trophy" tone="amber" value={completed} label="challenges finished" />
-        <Stat icon="calendar" tone="blue" value={prep.activity.length} label="days practised" />
+        <Stat icon="trophy" tone="amber" value={completed} label="challenges done" />
+        <Stat icon="calendar" tone="blue" value={prep.activity.length} label="active days" />
       </Reveal>
 
       <Reveal className="home-grid">
         <section className="panel">
-          <h2 className="h2">Practise next <Link to="/problems" className="see-all small">All problems</Link></h2>
-          {practising.length > 0 && (
+          <h2 className="h2">Suggested for you <Link to="/problems" className="see-all small">All problems</Link></h2>
+          {practicing.length > 0 && (
             <div className="resume">
-              {practising.map((c) => (
+              {practicing.map((c) => (
                 <Link key={c.id} to={`/challenges/${c.id}`} className="resume-row">
                   <Icon name="clock" size={15} /> Continue <b>{c.title}</b>
                 </Link>
@@ -180,7 +180,7 @@ export default function Dashboard() {
             </div>
           )}
           {prep.next.length === 0 ? (
-            <p className="muted small">You've solved everything here. Nice.</p>
+            <p className="muted small">You have solved all the problems.</p>
           ) : (
             <div className="next-list">
               {prep.next.map((n) => (
@@ -204,7 +204,7 @@ export default function Dashboard() {
       </Reveal>
 
       <Reveal as="section" className="panel">
-        <h2 className="h2">Your year in practice</h2>
+        <h2 className="h2">Your activity</h2>
         <Heatmap activity={prep.activity} weeks={52} />
       </Reveal>
 
@@ -289,7 +289,7 @@ function JoinRoom({ onError }) {
         <input placeholder="Room code or link" value={code} onChange={(e) => setCode(e.target.value)} className="small-input" />
         <button className="btn ghost small">Join</button>
       </form>
-      <button className="link" onClick={openRoom}>Or open a new room</button>
+      <button className="link" onClick={openRoom}>Open a new room</button>
     </div>
   )
 }

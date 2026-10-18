@@ -44,7 +44,7 @@ export default function GroupPage() {
     else if (r) load()
   }
   async function destroy() {
-    if (!confirm(`Delete ${group.name}? Its challenges stay, but the group is gone.`)) return
+    if (!confirm(`Delete ${group.name}? Old challenges will stay.`)) return
     await api.deleteGroup(id)
     navigate('/groups')
   }
@@ -77,12 +77,12 @@ export default function GroupPage() {
             {members.length > 1 ? (
               <QuickChallenge groupId={group.id} groupName={group.name} groupMembers={members} title="Challenge the group" onCreated={load} />
             ) : (
-              <p className="muted">Add someone to the group to send a challenge.</p>
+              <p className="muted">Add a friend to this group first.</p>
             )}
           </div>
 
           <h2 className="h2" style={{ marginTop: 10 }}><Icon name="swords" /> Group challenges</h2>
-          {challenges.length === 0 && <div className="empty muted">No challenges yet. Send the first one above.</div>}
+          {challenges.length === 0 && <div className="empty muted">No challenges yet.</div>}
           {challenges.map((c) => (
             <Link key={c.id} to={`/challenges/${c.id}`} className="hr-row group-ch">
               <div className="hr-row-main">

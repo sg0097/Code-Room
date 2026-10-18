@@ -31,7 +31,7 @@ export function Chips({ c }) {
     <div className="chips">
       <span className="tag">{c.category}</span>
       <Level d={c.difficulty} />
-      <span className="tag">{c.practice ? 'Practice' : c.mode === 'collaborative' ? 'Together' : 'Race'}</span>
+      <span className="tag">{c.practice ? 'Practice' : c.mode === 'collaborative' ? 'Together' : 'Compete'}</span>
       <span className="tag">{c.timeLimitMin} min</span>
     </div>
   )

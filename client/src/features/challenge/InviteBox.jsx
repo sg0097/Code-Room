@@ -7,7 +7,7 @@ export default function InviteBox({ code, title, compact = false }) {
   const [copied, setCopied] = useState(false)
   if (!code) return null
   const url = inviteLink(code)
-  const text = `I challenge you: "${title}" on CodeRoom. Join here: ${url}`
+  const text = `Join my challenge on CodeRoom: "${title}" ${url}`
   async function copy() {
     try {
       await navigator.clipboard.writeText(url)
@@ -19,7 +19,7 @@ export default function InviteBox({ code, title, compact = false }) {
   }
   return (
     <div className={`invite-box ${compact ? 'compact' : ''}`}>
-      {!compact && <b>Send this link to your friend</b>}
+      {!compact && <b>Share this link with your friend</b>}
       <div className="invite-row">
         <input readOnly value={url} onFocus={(e) => e.target.select()} aria-label="Invite link" />
         <button className="btn small" onClick={copy}>{copied ? 'Copied ✓' : 'Copy link'}</button>
@@ -31,7 +31,7 @@ export default function InviteBox({ code, title, compact = false }) {
         {typeof navigator !== 'undefined' && navigator.share && (
           <button className="btn ghost small" onClick={() => navigator.share({ title: 'CodeRoom challenge', text, url }).catch(() => {})}>Share…</button>
         )}
-        {!compact && <span className="muted small">They sign in, and they're in. You become friends too.</span>}
+        {!compact && <span className="muted small">They sign in and join. You also become friends.</span>}
       </div>
     </div>
   )

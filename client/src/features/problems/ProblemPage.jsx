@@ -42,7 +42,7 @@ export default function ProblemPage() {
           {tab === 'followups' && (p.unlocked ? (
             <>
               <h3>What an interviewer asks next</h3>
-              <p className="muted small">Try answering each one against your design. They get harder as you go.</p>
+              <p className="muted small">Try to answer each one. They get harder.</p>
               <Bullets items={p.followUps} numbered />
               {!p.followUps.length && <p className="muted">No follow-ups yet.</p>}
             </>
@@ -50,7 +50,7 @@ export default function ProblemPage() {
           {tab === 'checklist' && (p.unlocked ? (
             <>
               <h3>What a good answer covers</h3>
-              <p className="muted small">Reviewers use this. It's not the only right answer: a different approach with good reasons is fine.</p>
+              <p className="muted small">This is what reviewers look for. Other good answers are also fine.</p>
               <Bullets items={p.checklist} />
               {!p.checklist.length && <p className="muted">No checklist yet.</p>}
             </>
@@ -106,7 +106,7 @@ function Locked({ what }) {
     <div className="locked">
       <div className="lock">locked</div>
       <p><b>{what} unlock after you solve this once.</b></p>
-      <p className="muted small">Seeing them first would shape your answer. Solve it, then use them to check how far your design holds up.</p>
+      <p className="muted small">Solve the problem first. Then these will open.</p>
     </div>
   )
 }
@@ -136,7 +136,7 @@ function SolvePanel({ p }) {
     <div className="solve">
       <div className="solve-card solve-feature">
         <h3>Challenge a friend</h3>
-        <p className="muted small">Race on the same timer, or solve it together in a live room. You get a link to send.</p>
+        <p className="muted small">Compete with a friend or solve it together. You get a link to share.</p>
         {published ? (
           <Link to={`/challenges/new?problem=${encodeURIComponent(p.slug)}`} className="btn cta">Challenge a friend</Link>
         ) : (
@@ -145,8 +145,8 @@ function SolvePanel({ p }) {
       </div>
 
       <div className="solve-card">
-        <h3>Practise alone</h3>
-        <p className="muted small">Timed. Follow-up questions unlock when you submit.</p>
+        <h3>Practice alone</h3>
+        <p className="muted small">Solve it alone with a timer.</p>
         <div className="row">
           <select value={minutes} onChange={(e) => setMinutes(e.target.value)} style={{ width: 'auto' }}>
             {meta.timeLimits.map((t) => <option key={t} value={t}>{t} min</option>)}

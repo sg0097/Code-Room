@@ -26,7 +26,7 @@ export default function JoinPage() {
       <div className="center">
         <div className="card join-card">
           <h2>Link not working</h2>
-          <p className="muted">{error}. Ask your friend to send a new one.</p>
+          <p className="muted">{error}. Ask your friend for a new link.</p>
           <Link to="/" className="btn">Go home</Link>
         </div>
       </div>
@@ -63,8 +63,8 @@ export default function JoinPage() {
         </div>
         <p className="muted">
           {invite.mode === 'independent'
-            ? 'You both solve it on your own, with the same time limit. Then you see both answers and talk about them.'
-            : 'You solve it together in one live room, with shared code, a whiteboard and video.'}
+            ? 'You both solve it alone, with the same time limit. Then you can see both answers.'
+            : 'You solve it together in one live room, with code, a whiteboard and video.'}
         </p>
         {!invite.open ? (
           <p className="error">This challenge has already finished.</p>

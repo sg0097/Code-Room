@@ -83,8 +83,8 @@ export default function CustomChallenge() {
 
       <div className="mode-pick">
         {[
-          ['independent', 'Race', 'Same problem, same timer. Compare after.'],
-          ['collaborative', 'Together', 'One live room: code, whiteboard, video.'],
+          ['independent', 'Compete', 'You both solve it alone, with the same time limit.'],
+          ['collaborative', 'Together', 'Solve it together in one room, with video.'],
         ].map(([value, title, desc]) => (
           <label key={value} className={`mode-card ${f.mode === value ? 'on' : ''}`}>
             <input type="radio" name="mode" value={value} checked={f.mode === value} onChange={set('mode')} />

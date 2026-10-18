@@ -27,11 +27,11 @@ export default function GroupsPage() {
       <div className="hr-head">
         <div className="crumbs"><Link to="/">Home</Link> <span>›</span> Groups</div>
         <h1>Groups</h1>
-        <p className="muted">Put friends in a group and challenge everyone at once. Each person answers on their own.</p>
+        <p className="muted">Add friends to a group and send one challenge to everyone. Each person solves it alone.</p>
       </div>
       <div className="hr-cols">
         <section className="hr-main">
-          {groups.length === 0 && <div className="empty muted">No groups yet. Make one on the right.</div>}
+          {groups.length === 0 && <div className="empty muted">No groups yet.</div>}
           <div className="group-grid">
             {groups.map((g) => (
               <Link key={g.id} to={`/groups/${g.id}`} className="group-card">
@@ -81,7 +81,7 @@ function NewGroup({ friends }) {
   return (
     <form className="hr-side-card new-group" onSubmit={create}>
       <b>New group</b>
-      <input placeholder="Group name, e.g. DSA night owls" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} aria-label="Group name" />
+      <input placeholder="Group name, e.g. College friends" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} aria-label="Group name" />
       {friends.length ? (
         <>
           <span className="muted small">Add friends</span>

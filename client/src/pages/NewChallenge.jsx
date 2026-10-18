@@ -7,7 +7,7 @@ export default function NewChallenge() {
   return (
     <div className="narrow">
       <QuickChallenge problemSlug={params.get('problem')} friendId={params.get('friend')} />
-      <p className="muted small center-text">Want to use your own question? <Link to="/challenges/custom">Write your own problem →</Link></p>
+      <p className="muted small center-text">Have your own question? <Link to="/challenges/custom">Write your own problem →</Link></p>
     </div>
   )
 }

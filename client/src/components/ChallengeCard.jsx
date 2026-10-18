@@ -66,7 +66,7 @@ export function MiniChallenge({ c, actions }) {
         <span className="mini-ch-text">
           <b>{c.title}</b>
           <span className="muted small">
-            {c.group ? c.group.name : c.mode === 'independent' ? 'Race' : 'Together'} · {creator ? `from ${creator.name.split(' ')[0]}` : c.group ? `${people?.length || 0} others` : people ? `with ${people.map((o) => o.name.split(' ')[0]).join(', ')}` : 'nobody joined yet'}
+            {c.group ? c.group.name : c.mode === 'independent' ? 'Compete' : 'Together'} · {creator ? `from ${creator.name.split(' ')[0]}` : c.group ? `${people?.length || 0} others` : people ? `with ${people.map((o) => o.name.split(' ')[0]).join(', ')}` : 'nobody joined yet'}
           </span>
         </span>
       </Link>

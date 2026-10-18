@@ -45,7 +45,7 @@ function Statement({ c }) {
   if (!c.statement) {
     return (
       <div className="card hidden-statement">
-        The problem is revealed when you start, so everyone gets exactly {c.timeLimitMin} minutes with it.
+        You will see the problem when you click Start. Everyone gets {c.timeLimitMin} minutes.
       </div>
     )
   }
@@ -149,8 +149,8 @@ export default function Challenge() {
         <h2>{creator.user.name} challenged you</h2>
         <p className="muted">
           {c.mode === 'independent'
-            ? `You'll each solve it on your own, then compare answers, discuss and review each other. Your ${c.timeLimitMin}-minute timer starts when you click Start, not now.`
-            : `You'll solve it together in a live room with a shared editor and video. ${c.timeLimitMin} minutes once the timer starts.`}
+            ? `You both solve it alone. Then you compare answers and review each other. Your ${c.timeLimitMin}-minute timer starts when you click Start.`
+            : `You solve it together in a live room with code, whiteboard and video. You get ${c.timeLimitMin} minutes.`}
         </p>
         <div className="row">
           <button className="btn" disabled={busy} onClick={() => act('accept')}>Accept</button>
@@ -165,12 +165,12 @@ export default function Challenge() {
           {c.status === 'INVITED' ? (
             <>
               <h2>{others.length ? `Waiting for ${othersNames} to accept` : 'Waiting for your friend to join'}</h2>
-              <p className="muted">You can open the room now. The timer starts once you're both in.</p>
+              <p className="muted">You can open the room now. The timer starts when you are both in.</p>
               <InviteBox code={c.inviteCode} title={c.title} />
             </>
           ) : (
             <>
-              <h2>{c.startedAt ? 'Session in progress' : 'Ready when you are'}</h2>
+              <h2>{c.startedAt ? 'In progress' : 'Ready to start'}</h2>
               <p className="muted">Open the room together. Start the {c.timeLimitMin}-minute timer from inside the room, then submit your team's answer.</p>
             </>
           )}
@@ -186,9 +186,9 @@ export default function Challenge() {
         <div className="card invite">
           <h2>Ready?</h2>
           <p className="muted">
-            Your {c.timeLimitMin}-minute timer starts when you click Start. Your work saves automatically, so you can close the tab and come back.
+            Your {c.timeLimitMin}-minute timer starts when you click Start. Your work is saved as you type.
             {pendingInvite && ` ${othersNames} hasn't accepted yet, but you can start anyway.`}
-            {!others.length && !c.practice && " Nobody has joined yet, but you can start anyway."}
+            {!others.length && !c.practice && " No one has joined yet, but you can start now."}
           </p>
           <button className="btn" disabled={busy} onClick={() => act('start')}>Start ({c.timeLimitMin} min)</button>
           {(pendingInvite || (!others.length && !c.practice)) && <InviteBox code={c.inviteCode} title={c.title} />}
@@ -204,7 +204,7 @@ export default function Challenge() {
     body = (
       <>
         <div className="card invite">
-          <h2>✓ Submitted. Your solution is locked.</h2>
+          <h2>✓ Submitted. You can't change your answer now.</h2>
           {left.length ? (
             <p className="muted">
               Waiting for {left.map((p) => p.user.name.split(' ')[0]).join(', ')}
@@ -212,12 +212,12 @@ export default function Challenge() {
               You'll see {others.length > 1 ? 'all the' : 'both'} answers when everyone is done.
             </p>
           ) : (
-            <p className="muted">Nobody has joined yet. Send the link: you'll see both answers when your friend is done.</p>
+            <p className="muted">No one has joined yet. Share the link with your friend.</p>
           )}
           {(!left.length || left.some((p) => p.state === 'INVITED')) && <InviteBox code={c.inviteCode} title={c.title} />}
           {me.role === 'creator' && left.length > 0 && others.some((p) => p.state === 'SUBMITTED') && (
             <div className="close-early">
-              <span className="muted small">Don't want to wait? Close it now: you'll compare the answers that are in. Anyone still solving keeps their time.</span>
+              <span className="muted small">Don't want to wait? Close it and see the answers that are in.</span>
               <button className="btn ghost small" disabled={busy} onClick={() => act('close')}>Close now and compare</button>
             </div>
           )}
@@ -252,10 +252,10 @@ export default function Challenge() {
       <>
         {c.practice ? (
           <div className="card callout done">
-            <span>✓ Submitted. Check your design against the follow-ups, then see how a friend would solve it.</span>
+            <span>✓ Submitted. Now try the follow-up questions.</span>
             {c.problem && <Link className="btn small" to={`/challenges/new?problem=${c.problem.slug}`}>Challenge a friend</Link>}
           </div>
-        ) : c.mode === 'independent' && <div className="card callout done">{view.submissions.length > 2 ? `All ${view.submissions.length} answers are in.` : 'Both answers are in.'} There's no single right answer: find where you thought differently, and ask why.</div>}
+        ) : c.mode === 'independent' && <div className="card callout done">{view.submissions.length > 2 ? `All ${view.submissions.length} answers are in.` : 'Both answers are in.'} Compare them and talk about what you did differently.</div>}
         {me.state === 'SUBMITTED' && <SolutionFeedback challenge={c} />}
         <Statement c={c} />
         <div className="tabs">

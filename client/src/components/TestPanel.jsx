@@ -48,7 +48,7 @@ export default function TestPanel({ spec, outcome, status, language, onRun, onSu
     <div className="tp" style={height ? { height } : undefined}>
       <div className="tp-bar">
         <b className="tp-title">{outcome ? (outcome.kind === 'submit' ? 'All tests' : 'Sample tests') : 'Test cases'}</b>
-        {status === 'loading' && <span className="tp-chip wait">Loading Python (first run only)…</span>}
+        {status === 'loading' && <span className="tp-chip wait">Loading Python…</span>}
         {status === 'running' && <span className="tp-chip wait">Running…</span>}
         {!status && outcome?.error && <span className="tp-chip bad">✗ {outcome.error.startsWith('Time limit') ? 'Time limit exceeded' : 'Error'}</span>}
         {!status && sum && (
@@ -58,7 +58,7 @@ export default function TestPanel({ spec, outcome, status, language, onRun, onSu
         )}
         {by && outcome && <span className="muted small">run by {by}</span>}
         <span className="tp-actions">
-          {!runnable && <span className="muted small">Tests run in Python or JavaScript</span>}
+          {!runnable && <span className="muted small">Switch to Python or JavaScript to run tests</span>}
           <button className="btn ghost small" disabled={!runnable || !!status} onClick={onRun} title="Run the sample tests (Ctrl+')">▶ Run code</button>
           {onSubmit && <button className="btn small" disabled={!runnable || !!status} onClick={onSubmit} title="Run every test, including hidden ones">Run all tests</button>}
         </span>
@@ -87,7 +87,7 @@ export default function TestPanel({ spec, outcome, status, language, onRun, onSu
             {hidden ? (
               <p className="muted small">
                 Hidden test. The input isn't shown.
-                {r && (r.pass ? ' It passed.' : ' It failed. Check edge cases: empty input, duplicates, limits.')}
+                {r && (r.pass ? ' It passed.' : ' It failed. Try edge cases like empty input or very large values.')}
               </p>
             ) : (
               <>

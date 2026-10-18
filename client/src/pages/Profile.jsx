@@ -204,7 +204,7 @@ function UsernameForm({ current, onChanged }) {
     <form className="card username-card" onSubmit={save}>
       <div>
         <h2>Username</h2>
-        <p className="muted small" style={{ margin: 0 }}>Friends find you by this. It has to be unique.</p>
+        <p className="muted small" style={{ margin: 0 }}>Friends find you with this.</p>
       </div>
       <div className="row wrap">
         <div className="at-input"><span>@</span><input value={value} onChange={(e) => { setValue(e.target.value); setState({}) }} maxLength={21} aria-label="Username" /></div>

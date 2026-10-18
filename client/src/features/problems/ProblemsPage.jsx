@@ -110,7 +110,7 @@ export default function ProblemsPage() {
           </details>
           <div className="hr-side-card">
             <b>Asked something new in an interview?</b>
-            <p className="muted small">Add it. We check it, then everyone can practise it.</p>
+            <p className="muted small">Add it. We check it, then everyone can practice it.</p>
             <div className="row wrap">
               <Link to="/problems/submit" className="btn small">Add a problem</Link>
               <Link to="/my/problems" className="btn ghost small">My submissions</Link>

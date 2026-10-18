@@ -47,7 +47,7 @@ export default function HeroMockup() {
         <span className="mock-ai-icon"><Icon name="sparkles" size={14} /></span>
         <div>
           <b>AI review · 4/5</b>
-          <span>Approach and code agree. Add a test for a full lot.</span>
+          <span>Good approach. Add a test for when the lot is full.</span>
         </div>
       </div>
       <div className="mock-float mock-chat">
