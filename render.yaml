@@ -5,6 +5,8 @@ services:
     name: coderoom
     runtime: node
     plan: free
+    # Same region as the Neon database (ap-southeast-1). A query then takes ~2 ms instead of ~160 ms.
+    region: singapore
     buildCommand: npm run build
     startCommand: npm start
     healthCheckPath: /api/config

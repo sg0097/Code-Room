@@ -54,6 +54,12 @@ async function init() {
     })
     // Open the minimum connections now instead of on the first user's request.
     await Promise.all([pool.query('SELECT 1'), pool.query('SELECT 1')])
+    // Neon's free plan pauses the database after ~5 idle minutes, and the next query then waits
+    // ~1 s for it to wake. While this server is running, a tiny query every 4 minutes keeps it
+    // awake. (Render's free plan sleeps the server after 15 idle minutes, which stops this too.)
+    if (process.env.DB_KEEP_WARM !== 'false') {
+      setInterval(() => pool.query('SELECT 1').catch(() => {}), 4 * 60_000).unref()
+    }
     backend = {
       name: 'postgres',
       query: (sql, params) => roundTrip(async () => (await pool.query(sql, params)).rows),
