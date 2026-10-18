@@ -30,7 +30,7 @@ if (!config.secret) {
   console.warn('[auth] SESSION_SECRET not set: using a random one (sessions reset on restart)')
 }
 if (config.devLogin) console.warn('[auth] DEV_LOGIN is ON: anyone can sign in with just a name. Never enable in production.')
-if (!config.googleClientId && !config.devLogin) console.warn('[auth] No GOOGLE_CLIENT_ID and DEV_LOGIN off: nobody can sign in.')
+if (!config.googleClientId) console.warn('[auth] No GOOGLE_CLIENT_ID: Google sign-in is off (username/password sign-in still works).')
 
 const google = new OAuth2Client()
 
