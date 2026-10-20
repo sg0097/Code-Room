@@ -38,6 +38,9 @@ async function roundTrip(run) {
   }
 }
 
+// Database connections kept open and ready (DB_POOL_MIN, default 6, max 10).
+const WARM = Math.min(10, Math.max(1, Number(process.env.DB_POOL_MIN) || 6))
+
 async function init() {
   if (process.env.DATABASE_URL) {
     const { default: pg } = await import('pg')
@@ -48,17 +51,20 @@ async function init() {
       // Opening a connection costs several network round trips (TCP + TLS + auth), often
       // 100–300 ms to a hosted database. pg's default closes idle connections after 10s,
       // so a quiet app paid that on almost every request. Keep a couple open and warm.
-      min: 2,
+      // The home page sends ~5 requests at once. Each one that finds no open connection pays the
+      // full handshake (~1 s to a far-away database), so keep enough open for a whole page.
+      min: WARM,
       idleTimeoutMillis: 5 * 60_000,
       keepAlive: true,
     })
-    // Open the minimum connections now instead of on the first user's request.
-    await Promise.all([pool.query('SELECT 1'), pool.query('SELECT 1')])
+    // Open them now instead of on the first user's requests (pg only keeps `min` once opened).
+    await Promise.all(Array.from({ length: WARM }, () => pool.query('SELECT 1')))
     // Neon's free plan pauses the database after ~5 idle minutes, and the next query then waits
     // ~1 s for it to wake. While this server is running, a tiny query every 4 minutes keeps it
     // awake. (Render's free plan sleeps the server after 15 idle minutes, which stops this too.)
     if (process.env.DB_KEEP_WARM !== 'false') {
-      setInterval(() => pool.query('SELECT 1').catch(() => {}), 4 * 60_000).unref()
+      // Touch every open connection, so none of them is dropped while idle either.
+      setInterval(() => Promise.all(Array.from({ length: WARM }, () => pool.query('SELECT 1'))).catch(() => {}), 4 * 60_000).unref()
     }
     backend = {
       name: 'postgres',
