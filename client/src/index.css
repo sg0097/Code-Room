@@ -1746,3 +1746,10 @@ body { background: transparent !important; }
   .room > .topbar b { font-size: 14px; }
 }
 .broken-part { border: 1px dashed var(--line-2); border-radius: 6px; padding: 14px; text-align: center; }
+
+/* Forgot password */
+.forgot-link { align-self: flex-start; }
+.auth-title { font-size: 30px; margin: 0; }
+.otp-input { font-family: var(--mono); font-size: 26px; letter-spacing: .35em; text-align: center; padding: 12px; }
+.email-input { width: 230px; }
+.row.between { justify-content: space-between; }

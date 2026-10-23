@@ -12,6 +12,7 @@ import { mountProblemRoutes } from './modules/problems/routes.js'
 import { mountReviewRoutes } from './modules/reviews/routes.js'
 import { mountExperienceRoutes } from './modules/experiences/routes.js'
 import { mountAdminRoutes } from './modules/admin/routes.js'
+import { mailEnabled } from './mail.js'
 import { mountPrepRoutes } from './modules/prep/routes.js'
 import { mountGroupRoutes } from './modules/groups/routes.js'
 import { workerEnabled } from './worker.js'
@@ -53,7 +54,7 @@ function iceServers() {
   return list
 }
 app.get('/api/config', (req, res) => {
-  res.json({ googleClientId: config.googleClientId, devLogin: config.devLogin, iceServers: iceServers(), aiReview: workerEnabled })
+  res.json({ googleClientId: config.googleClientId, devLogin: config.devLogin, iceServers: iceServers(), aiReview: workerEnabled, passwordReset: mailEnabled })
 })
 
 mountAuthRoutes(app)

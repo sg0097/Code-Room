@@ -39,6 +39,8 @@ export default function Profile() {
         <Link to="/my/problems" className="card"><b>✎</b><span>My problems →</span></Link>
       </div>
 
+      <EmailForm email={user.email} onChanged={(email) => setData((d) => ({ ...d, user: { ...d.user, email } }))} />
+
       <UsernameForm current={user.username} onChanged={(username) => setData((d) => ({ ...d, user: { ...d.user, username } }))} />
 
       <PrepForm />
@@ -209,6 +211,43 @@ function UsernameForm({ current, onChanged }) {
       <div className="row wrap">
         <div className="at-input"><span>@</span><input value={value} onChange={(e) => { setValue(e.target.value); setState({}) }} maxLength={21} aria-label="Username" /></div>
         <button className="btn ghost" disabled={state.busy || value.replace(/^@/, '').toLowerCase() === current}>Change</button>
+        {state.msg && <span className="ok small">{state.msg}</span>}
+        {state.error && <span className="error small" style={{ margin: 0 }}>{state.error}</span>}
+      </div>
+    </form>
+  )
+}
+
+/** The email used to reset your password. Only you can see it. */
+function EmailForm({ email, onChanged }) {
+  const { setUser, user } = useAuthCtx()
+  const [f, setF] = useState({ email: email || '', password: '' })
+  const [state, setState] = useState({ busy: false, msg: null, error: null })
+  async function save(e) {
+    e.preventDefault()
+    setState({ busy: true })
+    try {
+      const { user: u } = await api.setEmail(f.email, f.password)
+      setUser({ ...user, email: u.email })
+      onChanged(u.email)
+      setF({ email: u.email, password: '' })
+      setState({ busy: false, msg: 'Saved.' })
+    } catch (err) {
+      setState({ busy: false, error: err.message })
+    }
+  }
+  return (
+    <form className="card username-card" onSubmit={save}>
+      <div>
+        <h2>Email for password reset</h2>
+        <p className="muted small" style={{ margin: 0 }}>
+          {email ? 'We send a code here if you forget your password. Only you can see it.' : 'Add an email so you can reset your password if you forget it.'}
+        </p>
+      </div>
+      <div className="row wrap">
+        <input type="email" className="email-input" placeholder="you@example.com" value={f.email} onChange={(e) => { setF({ ...f, email: e.target.value }); setState({}) }} required aria-label="Email" />
+        <input type="password" className="email-input" placeholder="Your password" value={f.password} onChange={(e) => { setF({ ...f, password: e.target.value }); setState({}) }} required aria-label="Current password" autoComplete="current-password" />
+        <button className="btn ghost" disabled={state.busy || !f.email || !f.password || f.email.toLowerCase() === (email || '').toLowerCase()}>{email ? 'Change' : 'Save email'}</button>
         {state.msg && <span className="ok small">{state.msg}</span>}
         {state.error && <span className="error small" style={{ margin: 0 }}>{state.error}</span>}
       </div>

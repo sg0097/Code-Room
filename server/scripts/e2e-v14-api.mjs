@@ -298,7 +298,7 @@ const cookieOf = (res) => res.headers.get('set-cookie')?.split(';')[0]
   r = await post('/api/auth/signup', { name: 'Kiran', username: uname.toUpperCase(), email: `${uname}@Example.com`, password: 'long enough pw' })
   const made = await r.json()
   assert(r.status === 201 && made.user.username === uname, 'signed up, username lowercased')
-  assert((await post('/api/auth/signup', { name: 'Other', username: uname, password: 'long enough pw' })).status === 409, 'username unique')
+  assert((await post('/api/auth/signup', { name: 'Other', username: uname, email: `other_${uname}@example.com`, password: 'long enough pw' })).status === 409, 'username unique')
   assert((await post('/api/auth/signup', { name: 'Other', username: uname + 'x', email: `${uname}@example.com`, password: 'long enough pw' })).status === 409, 'email unique')
   assert((await post('/api/auth/login', { identifier: uname, password: 'wrong password' })).status === 401, 'wrong password')
   assert((await post('/api/auth/login', { identifier: 'nobody_here', password: 'wrong password' })).status === 401, 'unknown user, same error')
@@ -359,6 +359,57 @@ const cookieOf = (res) => res.headers.get('set-cookie')?.split(';')[0]
   await g1.call('DELETE', `/api/groups/${gid}/members/${g1.user.id}`)
   assert((await g2.call('GET', `/api/groups/${gid}`)).group.myRole === 'owner', 'earliest member becomes owner')
   log('groups: create, add, rename, race to all, separate answers, close early, scoreboard, ownership OK')
+}
+
+// ─── 12. Forgot password with a one-time code (v2.4) ─────────────────────────
+{
+  const n = Date.now() % 100000
+  const mailFor = async (to) => ((await (await fetch(BASE + '/api/dev/mail')).json()).mail || []).filter((m) => m.to === to)
+  const codeOf = (m) => m.text.match(/\b(\d{6})\b/)[1]
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+  const signup = (u, email) => post('/api/auth/signup', { name: 'Otp User', username: u, email, password: 'old password 1' })
+  assert((await signup(`otpx${n}`, '')).status === 400, 'email is required to sign up')
+  const u1 = `otpa${n}`, e1 = `${u1}@example.com`, u2 = `otpb${n}`, e2 = `${u2}@example.com`
+  assert((await signup(u1, e1)).status === 201 && (await signup(u2, e2)).status === 201, 'two accounts')
+
+  // The same reply for a real and an unknown account, and only the real one gets an email.
+  const unknown = await post('/api/auth/forgot', { identifier: `nobody_${n}` })
+  const known = await post('/api/auth/forgot', { identifier: '@' + u1 })
+  assert(unknown.status === 200 && known.status === 200 && (await unknown.json()).message === (await known.json()).message, 'same reply either way')
+  await sleep(200)
+  assert((await mailFor(e1)).length === 1 && /^\d{6} is your CodeRoom code$/.test((await mailFor(e1))[0].subject), 'one email with the code')
+  assert((await mailFor(`nobody_${n}@example.com`)).length === 0, 'no email for an unknown account')
+  await post('/api/auth/forgot', { identifier: e1 }); await sleep(200)
+  assert((await mailFor(e1)).length === 1, 'asking again within a minute sends nothing new')
+
+  // Five wrong guesses throw the code away, even for the right one afterwards.
+  const code1 = codeOf((await mailFor(e1))[0]), wrong = code1 === '000000' ? '111111' : '000000'
+  const reset = (id, code, password) => post('/api/auth/reset', { identifier: id, code, password })
+  assert((await reset(u1, wrong, 'x')).status === 400, 'a weak password is refused before any guess is counted')
+  for (let i = 0; i < 5; i++) assert((await reset(u1, wrong, 'new password 1')).status === 400, `wrong guess ${i + 1}`)
+  assert((await reset(u1, code1, 'new password 1')).status === 400, 'locked after 5 wrong guesses, even with the right code')
+  assert((await post('/api/auth/login', { identifier: u1, password: 'old password 1' })).status === 200, 'the old password still works: nothing changed')
+
+  // The normal path, with the second account.
+  await post('/api/auth/forgot', { identifier: u2 }); await sleep(200)
+  const code2 = codeOf((await mailFor(e2))[0]), wrong2 = code2 === '000000' ? '111111' : '000000'
+  assert((await reset(u2, wrong2, 'new password 2')).status === 400, 'one wrong guess')
+  assert((await reset(u2, code2, '12345678')).status === 400, 'only-numbers password refused, guess not wasted')
+  const ok = await reset(u2, code2, 'new password 2')
+  const okBody = await ok.json()
+  assert(ok.status === 200 && okBody.user.username === u2 && cookieOf(ok), 'reset worked and signed them in')
+  assert((await post('/api/auth/login', { identifier: u2, password: 'old password 1' })).status === 401, 'old password stops working')
+  assert((await post('/api/auth/login', { identifier: e2, password: 'new password 2' })).status === 200, 'new password works (by email)')
+  assert((await post('/api/auth/login', { identifier: '@' + u2, password: 'new password 2' })).status === 200, 'new password works (by username)')
+  assert((await reset(u2, code2, 'another password 3')).status === 400, 'a code works only once')
+
+  // Changing the recovery email needs the current password.
+  const cookie = cookieOf(await post('/api/auth/login', { identifier: u2, password: 'new password 2' }))
+  assert((await post('/api/me/email', { email: `new_${e2}`, password: 'wrong' }, cookie)).status === 401, 'wrong password')
+  assert((await post('/api/me/email', { email: e1, password: 'new password 2' }, cookie)).status === 409, "can't take someone else's email")
+  const changed = await (await post('/api/me/email', { email: `new_${e2}`, password: 'new password 2' }, cookie)).json()
+  assert(changed.user.email === `new_${e2}`, 'email changed')
+  log('forgot password: same reply, no mail-bombing, 5-guess lock, one-time code, old password dead, email change OK')
 }
 
 console.log('\nALL v1.4 API TESTS PASSED')

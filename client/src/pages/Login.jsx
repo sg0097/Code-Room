@@ -4,7 +4,7 @@ import { useAuth } from '../lib/auth'
 import { api } from '../lib/api'
 import Avatar from '../components/Avatar'
 import HeroMockup from '../components/HeroMockup'
-import { SignInForm, SignUpForm } from '../features/account/AccountForms'
+import { ForgotPassword, SignInForm, SignUpForm } from '../features/account/AccountForms'
 
 function loadGoogleScript() {
   if (window.google?.accounts?.id) return Promise.resolve()
@@ -27,6 +27,7 @@ export default function Login({ from: fromProp, invite } = {}) {
   const [error, setError] = useState(null)
   const [devName, setDevName] = useState('')
   const [tab, setTab] = useState(invite ? 'signup' : 'signin')
+  const [forgotStart, setForgotStart] = useState('')
   const [counts, setCounts] = useState(null)
 
   useEffect(() => {
@@ -83,11 +84,30 @@ export default function Login({ from: fromProp, invite } = {}) {
           </div>
         </div>
       ) : null}
-      <div className="auth-tabs" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === 'signin'} className={tab === 'signin' ? 'on' : ''} onClick={() => setTab('signin')}>Sign in</button>
-        <button type="button" role="tab" aria-selected={tab === 'signup'} className={tab === 'signup' ? 'on' : ''} onClick={() => setTab('signup')}>Create account</button>
-      </div>
-      {tab === 'signin' ? <SignInForm onDone={() => navigate(from, { replace: true })} /> : <SignUpForm onDone={() => navigate(from, { replace: true })} />}
+      {tab === 'forgot' ? (
+        <>
+          <h2 className="auth-title">Reset your password</h2>
+          <ForgotPassword start={forgotStart} onDone={() => navigate(from, { replace: true })} onBack={() => setTab('signin')} />
+        </>
+      ) : (
+        <>
+          <div className="auth-tabs" role="tablist">
+            <button type="button" role="tab" aria-selected={tab === 'signin'} className={tab === 'signin' ? 'on' : ''} onClick={() => setTab('signin')}>Sign in</button>
+            <button type="button" role="tab" aria-selected={tab === 'signup'} className={tab === 'signup' ? 'on' : ''} onClick={() => setTab('signup')}>Create account</button>
+          </div>
+          {tab === 'signin' ? (
+            <SignInForm
+              onDone={() => navigate(from, { replace: true })}
+              onForgot={(typed) => {
+                setForgotStart(typed)
+                setTab('forgot')
+              }}
+            />
+          ) : (
+            <SignUpForm onDone={() => navigate(from, { replace: true })} />
+          )}
+        </>
+      )}
 
       {config?.googleClientId && (
         <>

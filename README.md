@@ -1,4 +1,4 @@
-# CodeRoom (V2.3)
+# CodeRoom (V2.4)
 
 Challenge a friend with an unfamiliar engineering problem, solve it (alone or together), then compare, discuss and review.
 
@@ -196,6 +196,26 @@ DRY_RUN=true MAX_SITEMAPS=2 node scraper/experiences.mjs
 - **Close early**: the sender, once they and at least one other person have submitted, can stop waiting for people who haven't started. Anyone still solving keeps their time.
 - **Group page**: its challenges with "3/5 submitted", and a scoreboard per member (challenges done and sent).
 - Server: `groups`, `group_members`, `challenges.group_id`; routes in `modules/groups/routes.js`; `POST /api/challenges { groupId }`; `POST /api/challenges/:id/close`.
+
+## Forgot password with a one-time code (v2.4)
+
+On the sign-in card: **Forgot password?** → enter your username or email → we email a **6-digit code** → type it with a new password → you're signed in. You can sign in with **username + password** or **email + password** (same box).
+
+- **Email is now required at sign-up** (still private: nobody else sees it). Older accounts without one add it on the profile page ("Email for password reset", needs your current password).
+- **Safety:** the code is random (`crypto.randomInt`), stored only as a keyed hash, works for **10 minutes**, once. **5 wrong guesses** throw it away. One email per minute and 3 per hour per account. The reply is the same whether or not the account exists, the email goes out in the background, and an unknown account makes the same number of database calls, so neither the answer nor its timing shows who has an account. A weak new password is refused without using up a guess.
+- **Not covered yet:** signing in elsewhere stays valid after a reset (sessions are 7-day tokens, not stored on the server).
+
+**Turn it on (production).** Set these on your host (Render → Environment). Any SMTP provider works:
+
+| | Gmail | Brevo |
+|---|---|---|
+| `SMTP_HOST` | `smtp.gmail.com` | `smtp-relay.brevo.com` |
+| `SMTP_PORT` | `587` | `587` |
+| `SMTP_USER` | your Gmail address | the SMTP login shown in Brevo |
+| `SMTP_PASS` | a Google **App password** (needs 2-step verification) | your Brevo SMTP key |
+| `MAIL_FROM` | `CodeRoom <you@gmail.com>` | a sender you verified in Brevo |
+
+Without `SMTP_HOST` the "Forgot password?" link is hidden (`/api/config` says `passwordReset: false`). Locally (`DEV_LOGIN=true`) nothing is sent: emails are kept in memory and shown at `GET /api/dev/mail`, which only exists in dev. Gmail allows about 500 emails a day, Brevo's free plan 300.
 
 ## Accounts: username, email and password (v2.2)
 
@@ -419,7 +439,7 @@ The automated two-browser runs below passed against both PGlite and a real Postg
 - **v1.4 in the browser:** filters and prefix company search on 769 real GfG links → share a write-up → AI review on a draft appears without a reload → submit → admin review → admin publishes the experience and adds a LeetCode link → author sees the review. No horizontal scroll at 390 px wide.
 - **v1.5:** search understanding and word matching, live web results (against a fake Brave, `server/scripts/fake-brave.mjs`) ranked in and never stored, in the API test and the browser; a solo LLD answer with a folder, a file and a folder rename, autosaved and shown read-only after submit; in a collaborative LLD room, one person's new folder and file appear for the other with its code, and the team answer contains both files. API test also on Postgres 16.
 - **v1.6:** prep goal checks and the up-next ranking (unit tests); in the browser, a new user fills the goals form (role, YoE, date, language, two companies, two focus areas), saves, and the home shows the countdown, the goal, picks with reasons and experiences from those companies; avatar menu; phone width with no sideways scroll. Prep API also on Postgres 16. Library, room/whiteboard and API tests updated for the new layout and passing.
-- **v2.2:** accounts: a new person signs up (live username check), signs out, a wrong password is refused, signs in with email and with @username, finds friends by @username; API: weak/reserved/duplicate username and email refused, same error for unknown user, no email in search results, can't search by email, username change. Groups: create with two friends, rename, challenge the group (ticket shows the group), a member accepts from home and submits, the owner submits and closes early, both separate answers compared, group page shows 2/2 and the scoreboard; API: only friends can be added, only the owner renames, outsiders can't see or send, groups are races, ownership passes on. Also on Postgres 16.
+- **v2.4:** forgot password: unit tests for the code, hash, email and masking; API: same reply for real and unknown accounts, one email only, no second email within a minute, a weak password doesn't use a guess, 5 wrong guesses lock the code (the right one then fails too), a code works once, the old password stops working, new password works by email and by username, email change needs the current password and can't take someone else's; browser: sign up (email required) → sign out → forgot → code → wrong code refused → right code signs in → old password refused → email + new password works; the SMTP path against a local fake mail server; production without SMTP hides the feature (503) and the dev mail viewer returns 404.\n- **v2.2:** accounts: a new person signs up (live username check), signs out, a wrong password is refused, signs in with email and with @username, finds friends by @username; API: weak/reserved/duplicate username and email refused, same error for unknown user, no email in search results, can't search by email, username change. Groups: create with two friends, rename, challenge the group (ticket shows the group), a member accepts from home and submits, the owner submits and closes early, both separate answers compared, group page shows 2/2 and the scoreboard; API: only friends can be added, only the owner renames, outsiders can't see or send, groups are races, ownership passes on. Also on Postgres 16.
 - **v1.9:** in the browser: a new user sets a goal in three taps, creates a Race challenge from home and gets a link; someone not on CodeRoom opens it, signs in and joins (and they're friends); both solve and submit, see both answers and discuss; then a Together challenge to the new friend is accepted from home and opens the live room. API test: preview, join, rejoin, complete, late joiner refused, bad code; also on Postgres 16. Fixed: the discussion crashed in current Chrome once it had a message (an effect returned scrollIntoView's new Promise).
 - **v1.8:** test cases vs reference solutions in both languages (unit tests); in the browser: a room runs JavaScript (0/2 → 2/2 → 6/6 with hidden), the second person sees the result live, an infinite loop hits the time limit, Python via Pyodide passes 6/6; a library rate-limiter problem starts with Python starter code, fails, then passes 4/4 and the score shows after submit. Library, room/whiteboard and API tests updated and passing.
 - **v1.7:** streak rule (unit test); walk-through on the sidebar layout: goals → home with countdown ring, streak 1 and today's heatmap square after starting a problem; phone width; library, whiteboard/room and API tests passing.

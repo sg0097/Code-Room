@@ -25,8 +25,8 @@ function UsernameHint({ check }) {
     : <span className="field-hint small error">{check.reason}</span>
 }
 
-export function SignInForm({ onDone }) {
-  const { setUser } = useAuth()
+export function SignInForm({ onDone, onForgot }) {
+  const { setUser, config } = useAuth()
   const [f, setF] = useState({ identifier: '', password: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -55,6 +55,89 @@ export function SignInForm({ onDone }) {
       </label>
       {error && <p className="error small">{error}</p>}
       <button className="btn" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+      {config?.passwordReset && onForgot && <button type="button" className="text-btn forgot-link" onClick={() => onForgot(f.identifier)}>Forgot password?</button>}
+    </form>
+  )
+}
+
+/**
+ * Forgot password: say who you are, get a 6-digit code by email, then type it with a new password.
+ * The reply for step 1 is the same whether or not the account exists.
+ */
+export function ForgotPassword({ start = '', onDone, onBack }) {
+  const { setUser } = useAuth()
+  const [step, setStep] = useState('ask') // 'ask' | 'code'
+  const [id, setId] = useState(start)
+  const [f, setF] = useState({ code: '', password: '' })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+  const [wait, setWait] = useState(0) // seconds until "send again" works
+
+  useEffect(() => {
+    if (wait <= 0) return
+    const t = setTimeout(() => setWait((w) => w - 1), 1000)
+    return () => clearTimeout(t)
+  }, [wait])
+
+  async function ask(e) {
+    e?.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      await api.forgotPassword(id)
+      setStep('code')
+      setWait(60)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function reset(e) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      const { user } = await api.resetPassword(id, f.code, f.password)
+      setUser(user)
+      onDone?.()
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
+    }
+  }
+
+  if (step === 'ask') {
+    return (
+      <form className="auth-form" onSubmit={ask}>
+        <p className="muted small" style={{ margin: 0 }}>Enter your username or email. We'll email you a 6-digit code.</p>
+        <label className="field">
+          <span>Username or email</span>
+          <input autoFocus autoComplete="username" value={id} onChange={(e) => setId(e.target.value)} placeholder="@asha or asha@example.com" required />
+        </label>
+        {error && <p className="error small">{error}</p>}
+        <button className="btn" disabled={busy || !id.trim()}>{busy ? 'Sending…' : 'Send code'}</button>
+        <button type="button" className="text-btn forgot-link" onClick={onBack}>Back to sign in</button>
+      </form>
+    )
+  }
+  return (
+    <form className="auth-form" onSubmit={reset}>
+      <p className="muted small" style={{ margin: 0 }}>If that account exists, we sent a 6-digit code to its email. It works for 10 minutes.</p>
+      <label className="field">
+        <span>6-digit code</span>
+        <input autoFocus inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7} className="otp-input" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.replace(/[^\d ]/g, '') })} placeholder="000000" required />
+      </label>
+      <label className="field">
+        <span>New password</span>
+        <input type="password" autoComplete="new-password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} placeholder="At least 8 characters" required minLength={8} />
+      </label>
+      {error && <p className="error small">{error}</p>}
+      <button className="btn" disabled={busy || f.code.replace(/\s/g, '').length !== 6}>{busy ? 'Saving…' : 'Set new password'}</button>
+      <div className="row between">
+        <button type="button" className="text-btn forgot-link" disabled={wait > 0 || busy} onClick={ask}>{wait > 0 ? `Send again in ${wait}s` : 'Send a new code'}</button>
+        <button type="button" className="text-btn forgot-link" onClick={onBack}>Back to sign in</button>
+      </div>
     </form>
   )
 }
@@ -91,8 +174,8 @@ export function SignUpForm({ onDone }) {
         <UsernameHint check={check} />
       </label>
       <label className="field">
-        <span>Email <span className="muted">(optional, only you can see it)</span></span>
-        <input type="email" autoComplete="email" value={f.email} onChange={set('email')} placeholder="you@example.com" />
+        <span>Email <span className="muted">(only used to reset your password)</span></span>
+        <input type="email" autoComplete="email" value={f.email} onChange={set('email')} placeholder="you@example.com" required />
       </label>
       <label className="field">
         <span>Password</span>

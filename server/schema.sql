@@ -264,3 +264,13 @@ CREATE TABLE IF NOT EXISTS group_members (
 CREATE INDEX IF NOT EXISTS group_members_user_idx ON group_members (user_id);
 ALTER TABLE challenges ADD COLUMN IF NOT EXISTS group_id text REFERENCES groups(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS challenges_group_idx ON challenges (group_id) WHERE group_id IS NOT NULL;
+
+-- ─── v2.4: password reset codes ──────────────────────────────────────────────────
+-- One live code per person (asking again replaces it). Only a keyed hash is stored.
+CREATE TABLE IF NOT EXISTS password_resets (
+  user_id     text PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  code_hash   text NOT NULL,
+  expires_at  timestamptz NOT NULL,
+  attempts    int NOT NULL DEFAULT 0,
+  sent_at     timestamptz NOT NULL DEFAULT now()
+);

@@ -27,3 +27,15 @@ services:
         sync: false
       - key: BRAVE_API_KEY
         sync: false
+      # Email for "forgot password" codes. Any SMTP provider works (Gmail app password, Brevo, ...).
+      # Leave empty and the "Forgot password?" link is hidden.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false

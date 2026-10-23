@@ -5,6 +5,9 @@ import crypto from 'node:crypto'
 import { query } from './db.js'
 import { rateLimit } from './limits.js'
 import { cleanGoogleClientId } from './env.js'
+import { OTP, newCode, hashCode, codeMatches, resetEmail, maskEmail } from './otp.js'
+import { sendMail, outbox, mailEnabled } from './mail.js'
+import { allow } from './limits.js'
 import { checkUsername, suggestUsername, checkPassword, checkEmail, hashPassword, verifyPassword, DUMMY_HASH } from './accounts.js'
 
 const COOKIE = 'cr_session'
@@ -171,6 +174,8 @@ export function mountAuthRoutes(app) {
     if (u.error) return res.status(400).json({ error: u.error, field: 'username' })
     const e = checkEmail(b.email)
     if (e.error) return res.status(400).json({ error: e.error, field: 'email' })
+    // Needed to reset a forgotten password. It stays private: nobody else ever sees it.
+    if (!e.email) return res.status(400).json({ error: 'Enter your email. We only use it to reset your password.', field: 'email' })
     const pw = checkPassword(b.password)
     if (pw.error) return res.status(400).json({ error: pw.error, field: 'password' })
     if (await usernameTaken(u.username)) return res.status(409).json({ error: 'That username is taken', field: 'username' })
@@ -209,6 +214,92 @@ export function mountAuthRoutes(app) {
     issueSession(res, user)
     res.json({ user: withRole(user) })
   })
+
+  // ─── Forgot password: a 6-digit code by email ────────────────────────────────
+  // The reply is always the same, whether or not the account exists, and the email goes out in
+  // the background. The unknown-account path makes the same number of database calls, so neither
+  // the reply nor how long it takes shows who has an account.
+  const SAME = { ok: true, message: "If that account exists, we've emailed it a 6-digit code." }
+  const BAD_CODE = 'That code is wrong or has expired. Ask for a new one.'
+  const findByIdentifier = async (id) =>
+    (await query(
+      `SELECT id, email, name, picture, username FROM users WHERE lower(username) = $1 OR lower(email) = $1
+        ORDER BY (password_hash IS NOT NULL) DESC LIMIT 1`,
+      [id],
+    ))[0]
+  const cleanId = (v) => String(v || '').trim().replace(/^@/, '').toLowerCase().slice(0, 200)
+
+  app.post('/api/auth/forgot', rateLimit('forgot', 8, 3600_000), async (req, res) => {
+    if (!mailEnabled) return res.status(503).json({ error: "Password reset isn't set up on this server yet." })
+    const id = cleanId(req.body?.identifier)
+    if (!id) return res.status(400).json({ error: 'Enter your username or email' })
+    // At most 3 emails an hour for one account, whatever the number of places asking.
+    if (!allow(`forgot-account:${id}`, 3, 3600_000)) return res.json(SAME)
+    const user = await findByIdentifier(id)
+    if (user?.email) {
+      const code = newCode()
+      // Asking again within a minute keeps the old code and sends nothing (no mail-bombing).
+      const rows = await query(
+        `INSERT INTO password_resets (user_id, code_hash, expires_at, attempts, sent_at) VALUES ($1, $2, $3, 0, now())
+         ON CONFLICT (user_id) DO UPDATE SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at, attempts = 0, sent_at = now()
+          WHERE password_resets.sent_at < $4
+         RETURNING user_id`,
+        [user.id, hashCode(code, user.id, config.secret), new Date(Date.now() + OTP.ttlMs), new Date(Date.now() - OTP.resendMs)],
+      )
+      if (rows.length) void sendMail({ to: user.email, ...resetEmail(code, user.name) })
+    } else {
+      await query('SELECT 1') // same number of database calls as the branch above
+    }
+    res.json(SAME)
+  })
+
+  // Check the code, set the new password, and sign them in (the code proves they own the email).
+  app.post('/api/auth/reset', rateLimit('reset', 20, 3600_000), async (req, res) => {
+    const id = cleanId(req.body?.identifier)
+    const pw = checkPassword(req.body?.password)
+    if (pw.error) return res.status(400).json({ error: pw.error, field: 'password' }) // before any guess is counted
+    const user = id && (await findByIdentifier(id))
+    if (!user) {
+      await query('SELECT 1')
+      return res.status(400).json({ error: BAD_CODE, field: 'code' })
+    }
+    // Count this guess first, in one statement, so guesses sent at the same moment can't beat the limit.
+    const [live] = await query(
+      `UPDATE password_resets SET attempts = attempts + 1
+        WHERE user_id = $1 AND expires_at > now() AND attempts < $2 RETURNING code_hash`,
+      [user.id, OTP.maxAttempts],
+    )
+    if (!live || !codeMatches(req.body?.code, user.id, config.secret, live.code_hash)) {
+      return res.status(400).json({ error: BAD_CODE, field: 'code' })
+    }
+    await query(
+      `WITH used AS (DELETE FROM password_resets WHERE user_id = $1) UPDATE users SET password_hash = $2 WHERE id = $1`,
+      [user.id, await hashPassword(pw.password)],
+    )
+    const session = { id: user.id, email: user.email, name: user.name, picture: user.picture, username: user.username }
+    knownUsers.add(user.id)
+    issueSession(res, session)
+    res.json({ user: withRole(session) })
+  })
+
+  // Add or change the email used for recovery. Needs your current password.
+  app.post('/api/me/email', requireUser, rateLimit('set-email', 10, 3600_000), async (req, res) => {
+    const e = checkEmail(req.body?.email)
+    if (e.error || !e.email) return res.status(400).json({ error: e.error || 'Enter your email' })
+    const [row] = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id])
+    if (!row?.password_hash) return res.status(400).json({ error: 'This account signs in with Google, so its email is managed there.' })
+    if (!(await verifyPassword(String(req.body?.password || ''), row.password_hash))) return res.status(401).json({ error: 'Wrong password' })
+    if ((await query('SELECT 1 FROM users WHERE lower(email) = $1 AND id <> $2', [e.email, req.user.id])).length) {
+      return res.status(409).json({ error: 'Another account already uses this email' })
+    }
+    await query('UPDATE users SET email = $2 WHERE id = $1', [req.user.id, e.email])
+    const user = { ...req.user, email: e.email }
+    issueSession(res, user)
+    res.json({ user: withRole(user) })
+  })
+
+  // Local testing only: the emails this server "sent" (nothing is sent without SMTP settings).
+  if (config.devLogin) app.get('/api/dev/mail', (req, res) => res.json({ mail: outbox }))
 
   // Pick (or change) your username. Google sign-ins pick one the first time.
   app.post('/api/me/username', requireUser, rateLimit('set-username', 10, 3600_000), async (req, res) => {
