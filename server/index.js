@@ -112,8 +112,19 @@ app.use((err, req, res, next) => {
 
 // ---- Static client (production build) ----
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../client/dist')
-app.use(express.static(dist))
-app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(dist, 'index.html'), (err) => err && res.status(404).end()))
+// Files in /assets have a hash in their name (a new build gets new names), so the browser can
+// keep them for a year and skip asking the server on every visit. Before this, each file cost a
+// round trip to confirm it hadn't changed. An old name that no longer exists is a real 404, not
+// the home page, so a tab from before a deploy fails loudly instead of loading HTML as JavaScript.
+app.use('/assets', express.static(path.join(dist, 'assets'), { maxAge: '1y', immutable: true, index: false }))
+app.use('/assets', (req, res) => res.status(404).end())
+app.use('/excalidraw-assets', express.static(path.join(dist, 'excalidraw-assets'), { maxAge: '30d', index: false }))
+// The page itself must always be re-checked: it's what points at the newest hashed files.
+app.use(express.static(dist, { setHeaders: (res, file) => file.endsWith('.html') && res.setHeader('Cache-Control', 'no-cache') }))
+app.get(/^\/(?!api\/).*/, (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache')
+  res.sendFile(path.join(dist, 'index.html'), (err) => err && res.status(404).end())
+})
 
 // ---- WebSockets: /sync/<code> (Yjs) and /signal/<code> (WebRTC) ----
 const server = http.createServer(app)

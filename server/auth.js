@@ -4,13 +4,14 @@ import { parseCookie } from 'cookie'
 import crypto from 'node:crypto'
 import { query } from './db.js'
 import { rateLimit } from './limits.js'
+import { cleanGoogleClientId } from './env.js'
 import { checkUsername, suggestUsername, checkPassword, checkEmail, hashPassword, verifyPassword, DUMMY_HASH } from './accounts.js'
 
 const COOKIE = 'cr_session'
 const SESSION_DAYS = 7
 
 export const config = {
-  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  googleClientId: cleanGoogleClientId(process.env.GOOGLE_CLIENT_ID),
   devLogin: process.env.DEV_LOGIN === 'true',
   secret: process.env.SESSION_SECRET || '',
   secure: process.env.NODE_ENV === 'production',
@@ -30,6 +31,9 @@ if (!config.secret) {
   console.warn('[auth] SESSION_SECRET not set: using a random one (sessions reset on restart)')
 }
 if (config.devLogin) console.warn('[auth] DEV_LOGIN is ON: anyone can sign in with just a name. Never enable in production.')
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID.trim() !== config.googleClientId) {
+  console.warn('[auth] GOOGLE_CLIENT_ID had extra characters around it. Using just the ID. Fix it in your host settings.')
+}
 if (!config.googleClientId) console.warn('[auth] No GOOGLE_CLIENT_ID: Google sign-in is off (username/password sign-in still works).')
 
 const google = new OAuth2Client()

@@ -36,3 +36,13 @@ test('password hashes verify, are salted, and never contain the password', async
   assert.equal(await verifyPassword('anything', DUMMY_HASH), false)
   assert.equal(await verifyPassword('x', 'garbage'), false)
 })
+
+test('a pasted Google client ID is cleaned up', async () => {
+  const { cleanGoogleClientId } = await import('../../env.js')
+  const id = '1044444353980-va7socqbcsiacpljlk89rtcv459atfn0.apps.googleusercontent.com'
+  assert.equal(cleanGoogleClientId(id), id)
+  assert.equal(cleanGoogleClientId(`${id}\nw`), id, 'stray line break and letter')
+  assert.equal(cleanGoogleClientId(`  ${id} \n`), id)
+  assert.equal(cleanGoogleClientId('not an id'), '')
+  assert.equal(cleanGoogleClientId(undefined), '')
+})
