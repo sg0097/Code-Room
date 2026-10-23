@@ -41,8 +41,31 @@ if (!config.googleClientId) console.warn('[auth] No GOOGLE_CLIENT_ID: Google sig
 
 const google = new OAuth2Client()
 
-function issueSession(res, user) {
-  const token = jwt.sign(user, config.secret, { expiresIn: `${SESSION_DAYS}d` })
+// Each account has a session version. A token only works while its version is the current one,
+// so "sign out everywhere" is just adding 1. The current version is cached for a minute per
+// person (so it isn't a database call on every request) and updated at once by this process
+// when it changes it.
+const versions = new Map() // userId → { v, at }
+const VERSION_TTL_MS = 60_000
+
+async function currentVersion(userId) {
+  const hit = versions.get(userId)
+  if (hit && Date.now() - hit.at < VERSION_TTL_MS) return hit.v
+  const v = (await query('SELECT session_version FROM users WHERE id = $1', [userId]))[0]?.session_version ?? 0
+  versions.set(userId, { v, at: Date.now() })
+  return v
+}
+
+/** Invalidates every session this person has. Returns the new version. */
+async function bumpVersion(userId) {
+  const v = (await query('UPDATE users SET session_version = session_version + 1 WHERE id = $1 RETURNING session_version', [userId]))[0]?.session_version ?? 0
+  versions.set(userId, { v, at: Date.now() })
+  return v
+}
+
+async function issueSession(res, user) {
+  const { sv: _old, ...who } = user
+  const token = jwt.sign({ ...who, sv: await currentVersion(user.id) }, config.secret, { expiresIn: `${SESSION_DAYS}d` })
   res.cookie(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -51,16 +74,23 @@ function issueSession(res, user) {
   })
 }
 
-/** Reads the session from a raw Cookie header. Used for both HTTP and WebSocket upgrades. */
+/** Reads the session from a raw Cookie header. This only checks the signature: use sessionUser to also check it hasn't been signed out. */
 export function userFromCookieHeader(header) {
   const token = parseCookie(header || '')[COOKIE]
   if (!token) return null
   try {
-    const { id, email, name, picture, username } = jwt.verify(token, config.secret)
-    return { id, email, name, picture, username: username || null }
+    const { id, email, name, picture, username, sv } = jwt.verify(token, config.secret)
+    return { id, email, name, picture, username: username || null, sv: sv ?? 0 } // older tokens have no sv: version 0
   } catch {
     return null
   }
+}
+
+/** The signed-in user, or null if there's no valid session or it was signed out. For HTTP and WebSocket upgrades. */
+export async function sessionUser(header) {
+  const user = userFromCookieHeader(header)
+  if (!user) return null
+  return user.sv === (await currentVersion(user.id)) ? user : null
 }
 
 // Session users are written to the DB at login. This also re-creates the row if the
@@ -76,8 +106,13 @@ async function upsertUser(user) {
 }
 
 export async function requireUser(req, res, next) {
-  const user = userFromCookieHeader(req.headers.cookie)
-  if (!user) return res.status(401).json({ error: 'Not signed in' })
+  let user
+  try {
+    user = await sessionUser(req.headers.cookie)
+  } catch (e) {
+    return next(e)
+  }
+  if (!user) return res.status(401).json({ error: 'Not signed in', signedOut: true })
   try {
     if (!knownUsers.has(user.id)) await upsertUser(user)
   } catch (e) {
@@ -93,7 +128,11 @@ export function requireAdmin(req, res, next) {
   next()
 }
 
-const withRole = (user) => user && { ...user, isAdmin: isAdmin(user) }
+const withRole = (user) => {
+  if (!user) return user
+  const { sv: _sv, ...rest } = user // the session number stays on the server
+  return { ...rest, isAdmin: isAdmin(user) }
+}
 
 /** The first free username starting from `base` (asha, asha2, asha3…). */
 async function freeUsername(base) {
@@ -111,11 +150,11 @@ const usernameTaken = async (u, exceptId = '') =>
 export function mountAuthRoutes(app) {
   app.get('/api/me', async (req, res, next) => {
     try {
-      const user = userFromCookieHeader(req.headers.cookie)
+      const user = await sessionUser(req.headers.cookie)
       // Sessions from before usernames existed: pick it up from the database once.
       if (user && !user.username) {
         user.username = await usernameOf(user.id)
-        if (user.username) issueSession(res, user)
+        if (user.username) await issueSession(res, user)
       }
       res.json({ user: withRole(user) })
     } catch (e) {
@@ -133,7 +172,7 @@ export function mountAuthRoutes(app) {
       const user = { id: `g_${p.sub}`, email: p.email || null, name: p.name || p.email, picture: p.picture || null }
       await upsertUser(user)
       user.username = await usernameOf(user.id) // null the first time: the app asks them to pick one
-      issueSession(res, user)
+      await issueSession(res, user)
       res.json({ user: withRole(user) })
     } catch (e) {
       res.status(401).json({ error: 'Invalid Google credential' })
@@ -153,7 +192,7 @@ export function mountAuthRoutes(app) {
         user.username = await freeUsername(slug === 'admin' ? 'admin' : suggestUsername(name))
         await query('UPDATE users SET username = $2 WHERE id = $1', [user.id, user.username])
       }
-      issueSession(res, user)
+      await issueSession(res, user)
       res.json({ user: withRole(user) })
     })
   }
@@ -162,7 +201,7 @@ export function mountAuthRoutes(app) {
   app.get('/api/auth/username', rateLimit('username-check', 60, 60_000), async (req, res) => {
     const { username, error } = checkUsername(req.query.u)
     if (error) return res.json({ available: false, reason: error })
-    const me = userFromCookieHeader(req.headers.cookie)
+    const me = await sessionUser(req.headers.cookie)
     res.json((await usernameTaken(username, me?.id)) ? { available: false, reason: 'That username is taken' } : { available: true, username })
   })
 
@@ -193,7 +232,7 @@ export function mountAuthRoutes(app) {
       throw err
     }
     knownUsers.add(user.id)
-    issueSession(res, user)
+    await issueSession(res, user)
     res.status(201).json({ user: withRole(user) })
   })
 
@@ -211,7 +250,7 @@ export function mountAuthRoutes(app) {
     if (!row || !ok) return res.status(401).json({ error: 'Wrong username/email or password' })
     const user = { id: row.id, email: row.email, name: row.name, picture: row.picture, username: row.username }
     knownUsers.add(user.id)
-    issueSession(res, user)
+    await issueSession(res, user)
     res.json({ user: withRole(user) })
   })
 
@@ -272,13 +311,16 @@ export function mountAuthRoutes(app) {
     if (!live || !codeMatches(req.body?.code, user.id, config.secret, live.code_hash)) {
       return res.status(400).json({ error: BAD_CODE, field: 'code' })
     }
-    await query(
-      `WITH used AS (DELETE FROM password_resets WHERE user_id = $1) UPDATE users SET password_hash = $2 WHERE id = $1`,
+    // New password, code used up, and every other session signed out, in one statement.
+    const [{ session_version: v }] = await query(
+      `WITH used AS (DELETE FROM password_resets WHERE user_id = $1)
+       UPDATE users SET password_hash = $2, session_version = session_version + 1 WHERE id = $1 RETURNING session_version`,
       [user.id, await hashPassword(pw.password)],
     )
+    versions.set(user.id, { v, at: Date.now() })
     const session = { id: user.id, email: user.email, name: user.name, picture: user.picture, username: user.username }
     knownUsers.add(user.id)
-    issueSession(res, session)
+    await issueSession(res, session)
     res.json({ user: withRole(session) })
   })
 
@@ -294,7 +336,7 @@ export function mountAuthRoutes(app) {
     }
     await query('UPDATE users SET email = $2 WHERE id = $1', [req.user.id, e.email])
     const user = { ...req.user, email: e.email }
-    issueSession(res, user)
+    await issueSession(res, user)
     res.json({ user: withRole(user) })
   })
 
@@ -313,12 +355,19 @@ export function mountAuthRoutes(app) {
       throw err
     }
     const user = { ...req.user, username: u.username }
-    issueSession(res, user)
+    await issueSession(res, user)
     res.json({ user: withRole(user) })
   })
 
   app.get('/api/me/username-suggestion', requireUser, async (req, res) => {
     res.json({ username: await freeUsername(suggestUsername(req.user.email || req.user.name)) })
+  })
+
+  // Signs every device out, including other browsers. This one gets a fresh session so you stay in.
+  app.post('/api/auth/logout-all', requireUser, rateLimit('logout-all', 10, 3600_000), async (req, res) => {
+    await bumpVersion(req.user.id)
+    await issueSession(res, req.user)
+    res.json({ ok: true })
   })
 
   app.post('/api/auth/logout', (req, res) => {

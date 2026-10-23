@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { WebSocketServer } from 'ws'
 import { setupWSConnection } from '@y/websocket-server/utils'
 import { ready as dbReady, stats } from './db.js'
-import { mountAuthRoutes, requireUser, userFromCookieHeader, config } from './auth.js'
+import { mountAuthRoutes, requireUser, sessionUser, config } from './auth.js'
 import { mountFriendRoutes } from './friends.js'
 import { mountChallengeRoutes } from './challenges.js'
 import { mountProblemRoutes } from './modules/problems/routes.js'
@@ -155,7 +155,7 @@ server.on('upgrade', async (req, socket, head) => {
     if (kind !== 'sync' && kind !== 'signal') return reject(socket, 404, 'Not Found')
     if (!sameOrigin(req)) return reject(socket, 403, 'Forbidden')
 
-    const user = userFromCookieHeader(req.headers.cookie)
+    const user = await sessionUser(req.headers.cookie)
     if (!user) return reject(socket, 401, 'Unauthorized')
     const found = await roomForUser(code, user.id) // one query: room + challenge + my state
     if (!found) return reject(socket, 404, 'Not Found')

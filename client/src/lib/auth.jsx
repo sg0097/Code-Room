@@ -12,6 +12,13 @@ export function AuthProvider({ children }) {
       .catch((e) => setState({ loading: false, user: null, config: null, error: e.message }))
   }, [])
 
+  // Signed out somewhere else: drop the user, and the app shows the sign-in page.
+  useEffect(() => {
+    const out = () => setState((s) => (s.user ? { ...s, user: null } : s))
+    window.addEventListener('coderoom:signed-out', out)
+    return () => window.removeEventListener('coderoom:signed-out', out)
+  }, [])
+
   const setUser = useCallback((user) => setState((s) => ({ ...s, user })), [])
   const logout = useCallback(async () => {
     await api.logout().catch(() => {})

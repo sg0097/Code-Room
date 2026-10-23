@@ -43,6 +43,8 @@ export default function Profile() {
 
       <UsernameForm current={user.username} onChanged={(username) => setData((d) => ({ ...d, user: { ...d.user, username } }))} />
 
+      <SessionsCard />
+
       <PrepForm />
     </div>
   )
@@ -252,5 +254,33 @@ function EmailForm({ email, onChanged }) {
         {state.error && <span className="error small" style={{ margin: 0 }}>{state.error}</span>}
       </div>
     </form>
+  )
+}
+
+/** Sign every other browser and phone out. */
+function SessionsCard() {
+  const [state, setState] = useState({ busy: false, msg: null, error: null })
+  async function signOutAll() {
+    if (!confirm('Sign out of every device? You will stay signed in here.')) return
+    setState({ busy: true })
+    try {
+      await api.logoutAll()
+      setState({ busy: false, msg: 'Done. All other devices are signed out.' })
+    } catch (err) {
+      setState({ busy: false, error: err.message })
+    }
+  }
+  return (
+    <div className="card username-card">
+      <div>
+        <h2>Signed in on other devices?</h2>
+        <p className="muted small" style={{ margin: 0 }}>Lost a phone or used a shared computer? Sign out everywhere. Resetting your password does this too.</p>
+      </div>
+      <div className="row wrap">
+        <button className="btn ghost" disabled={state.busy} onClick={signOutAll}>Sign out of all devices</button>
+        {state.msg && <span className="ok small">{state.msg}</span>}
+        {state.error && <span className="error small" style={{ margin: 0 }}>{state.error}</span>}
+      </div>
+    </div>
   )
 }

@@ -4,7 +4,12 @@
  */
 const hits = new Map()
 
+// For automated tests, which sign in many times from one address. Only works with DEV_LOGIN=true,
+// so setting it on a real server does nothing.
+const OFF = process.env.DEV_LOGIN === 'true' && process.env.RATE_LIMIT_OFF === 'true'
+
 export function allow(key, max, windowMs) {
+  if (OFF) return true
   const now = Date.now()
   const list = (hits.get(key) || []).filter((t) => now - t < windowMs)
   if (list.length >= max) {

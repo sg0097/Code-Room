@@ -4,6 +4,7 @@
 // and a fresh database (it creates users and problems).
 //   node server/scripts/e2e-v14-api.mjs
 import { execFileSync } from 'node:child_process'
+import WebSocket from 'ws'
 
 const BASE = process.env.BASE || 'http://localhost:3001'
 const TOKEN = 'testtoken'
@@ -410,6 +411,49 @@ const cookieOf = (res) => res.headers.get('set-cookie')?.split(';')[0]
   const changed = await (await post('/api/me/email', { email: `new_${e2}`, password: 'new password 2' }, cookie)).json()
   assert(changed.user.email === `new_${e2}`, 'email changed')
   log('forgot password: same reply, no mail-bombing, 5-guess lock, one-time code, old password dead, email change OK')
+}
+
+// ─── 13. Signing out everywhere (v2.5) ───────────────────────────────────────
+{
+  const n = Date.now() % 100000, u = `sess${n}`, email = `${u}@example.com`
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+  const get = (path, cookie) => fetch(BASE + path, { headers: { cookie } })
+  await post('/api/auth/signup', { name: 'Sess User', username: u, email, password: 'first password 1' })
+  const login = async (pw = 'first password 1') => cookieOf(await post('/api/auth/login', { identifier: u, password: pw }))
+  const phone = await login(), laptop = await login()
+  assert((await get('/api/library', phone)).status === 200 && (await get('/api/library', laptop)).status === 200, 'both devices work')
+
+  // A password reset signs out every other device, and keeps the one that did it.
+  await post('/api/auth/forgot', { identifier: u }); await sleep(200)
+  const mail = ((await (await fetch(BASE + '/api/dev/mail')).json()).mail || []).find((m) => m.to === email)
+  const reset = await post('/api/auth/reset', { identifier: u, code: mail.text.match(/\b(\d{6})\b/)[1], password: 'second password 2' })
+  const fresh = cookieOf(reset)
+  assert(reset.status === 200 && fresh, 'reset worked')
+  assert((await get('/api/library', phone)).status === 401 && (await get('/api/library', laptop)).status === 401, 'both old devices are signed out')
+  assert((await (await get('/api/me', phone)).json()).user === null, '/api/me shows signed out')
+  assert((await get('/api/library', fresh)).status === 200, 'the device that reset stays signed in')
+
+  // The same for "sign out of all devices".
+  const a = await login('second password 2'), b = await login('second password 2')
+  assert((await get('/api/library', a)).status === 200 && (await get('/api/library', b)).status === 200, 'signed in again on two devices')
+  const out = await post('/api/auth/logout-all', {}, a)
+  const stay = cookieOf(out)
+  assert(out.status === 200 && stay, 'sign out everywhere')
+  assert((await get('/api/library', b)).status === 401 && (await get('/api/library', a)).status === 401 && (await get('/api/library', fresh)).status === 401, 'every older session is dead')
+  assert((await get('/api/library', stay)).status === 200, 'this device stays signed in')
+  assert((await post('/api/auth/logout-all', {})).status === 401, 'needs a session')
+  assert(!(await (await get('/api/me', stay)).text()).includes('"sv"'), "the session number isn't sent to the browser")
+  // Live rooms too: a signed-out device can't connect, a current one can.
+  const roomCode = (await (await post('/api/rooms', {}, stay)).json()).code
+  const ws = (cookie) => new Promise((resolve) => {
+    const sock = new WebSocket(`${BASE.replace('http', 'ws')}/sync/${roomCode}`, { headers: { cookie, origin: BASE } })
+    sock.on('open', () => { sock.close(); resolve('open') })
+    sock.on('unexpected-response', (_req, res) => resolve(res.statusCode))
+    sock.on('error', () => resolve('error'))
+  })
+  assert((await ws(stay)) === 'open', 'a current session joins the live room')
+  assert((await ws(a)) === 401, 'a signed-out session is refused by the live room')
+  log('sign out everywhere: reset and logout-all end other sessions (HTTP and live rooms), current device stays in OK')
 }
 
 console.log('\nALL v1.4 API TESTS PASSED')

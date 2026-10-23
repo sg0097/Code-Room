@@ -11,6 +11,9 @@ export async function request(method, url, body, opts = {}) {
     const err = new Error(data.error || `Request failed (${res.status})`)
     err.status = res.status
     err.data = data
+    // The server says this session was signed out (a password reset, or "sign out of all devices"
+    // somewhere else): let the app send the person to the sign-in page.
+    if (res.status === 401 && data.signedOut) window.dispatchEvent(new Event('coderoom:signed-out'))
     throw err
   }
   return data
@@ -30,6 +33,7 @@ export const api = {
   setUsername: (username) => request('POST', '/api/me/username', { username }),
   usernameSuggestion: () => request('GET', '/api/me/username-suggestion'),
   logout: () => request('POST', '/api/auth/logout'),
+  logoutAll: () => request('POST', '/api/auth/logout-all'),
   problems: () => request('GET', '/api/problems'),
   createRoom: (name) => request('POST', '/api/rooms', { name }),
   getRoom: (code) => request('GET', `/api/rooms/${encodeURIComponent(code)}`),

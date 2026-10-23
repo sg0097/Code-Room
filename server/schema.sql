@@ -274,3 +274,8 @@ CREATE TABLE IF NOT EXISTS password_resets (
   attempts    int NOT NULL DEFAULT 0,
   sent_at     timestamptz NOT NULL DEFAULT now()
 );
+
+-- ─── v2.5: signing out everywhere ────────────────────────────────────────────────
+-- Every session token carries this number. Resetting a password (or "sign out of all
+-- devices") adds 1, and every token with the old number stops working.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version int NOT NULL DEFAULT 0;
