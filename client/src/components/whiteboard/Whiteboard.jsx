@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ErrorBoundary from '../ErrorBoundary'
 import { Excalidraw, CaptureUpdateAction, getSceneVersion, reconcileElements, restoreElements } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 
@@ -69,7 +70,16 @@ export function SoloWhiteboard({ value, onChange, height = 540 }) {
 /**
  * Read-only render of a stored diagram (compare view, your locked submission).
  */
-export function DiagramView({ value, height = 380 }) {
+export function DiagramView(props) {
+  // A broken stored diagram shows a note instead of taking the whole page down.
+  return (
+    <ErrorBoundary inline resetKey={props.value} message="This diagram couldn't be shown.">
+      <DiagramViewInner {...props} />
+    </ErrorBoundary>
+  )
+}
+
+function DiagramViewInner({ value, height = 380 }) {
   const elements = useMemo(() => restoreElements(parse(value), null), [value])
   if (!elements.length) return <div className="muted small">(no diagram)</div>
   return (
@@ -77,6 +87,8 @@ export function DiagramView({ value, height = 380 }) {
       <Excalidraw
         key={value.length} // re-mount when the diagram changes
         initialData={{ elements, scrollToContent: true }}
+        // Zoom out so the whole diagram is visible, not just its middle.
+        excalidrawAPI={(api) => api && setTimeout(() => api.scrollToContent(elements, { fitToViewport: true, viewportZoomFactor: 0.9 }), 0)}
         viewModeEnabled
         zenModeEnabled
         theme="light"

@@ -113,10 +113,13 @@ export function Stars({ value, onChange, size = 22 }) {
   )
 }
 
+// `code` and **bold** inside a line of text.
 const inline = (line) =>
-  line.split(/(`[^`]+`)/).map((part, j) =>
-    part.startsWith('`') && part.endsWith('`') && part.length > 2 ? <code key={j}>{part.slice(1, -1)}</code> : part,
-  )
+  line.split(/(`[^`]+`|\*\*[^*]+\*\*)/).map((part, j) => {
+    if (part.length > 2 && part.startsWith('`') && part.endsWith('`')) return <code key={j}>{part.slice(1, -1)}</code>
+    if (part.length > 4 && part.startsWith('**') && part.endsWith('**')) return <strong key={j}>{part.slice(2, -2)}</strong>
+    return part
+  })
 
 /** Renders plain text: paragraphs, "- " bullet lists, `inline code` and ``` fenced code blocks. */
 export function RichText({ text }) {

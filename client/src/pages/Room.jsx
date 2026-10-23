@@ -177,7 +177,7 @@ export default function Room() {
     <div className="room">
       <header className="topbar">
         <div className="row">
-          <Link to="/" className="logo small"><span className="logo-mark">{'</>'}</span></Link>
+          <Link to="/" className="room-brand">CodeRoom<i>.</i></Link>
           <strong>{roomName}</strong>
           {!challenge && (
             <button className="code-chip" onClick={copyLink} title="Copy invite link">

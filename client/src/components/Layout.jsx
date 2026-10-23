@@ -5,6 +5,7 @@ import { api, request } from '../lib/api'
 import { usePoll } from './ui'
 import Avatar from './Avatar'
 import Icon from './Icon'
+import ErrorBoundary from './ErrorBoundary'
 
 /**
  * App shell: a navy top bar (places, search, "Challenge a friend", your account), like the
@@ -70,7 +71,9 @@ export default function Layout() {
         </div>
       </header>
       <main className="page">
-        <Outlet context={{ refreshBadges: refresh }} />
+        <ErrorBoundary resetKey={pathname}>
+          <Outlet context={{ refreshBadges: refresh }} />
+        </ErrorBoundary>
       </main>
     </div>
   )
